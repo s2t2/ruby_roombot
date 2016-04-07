@@ -64,17 +64,57 @@ module RubyRoombot
       decoded = ::JSON.parse(data)
       info("RECEIVED DATA (#{decoded["event"]}) -- #{decoded}")
 
-      if decoded["event"] == "phx_reply" && decoded["ref"] == 1 #joined the topic
+      if decoded["event"] == "phx_reply" && decoded["ref"] == 1 # joined the topic
         info("JOINED THE TOPIC")
         drive_forward
       elsif decoded["event"] == "sensor_update"
-        br = decoded["payload"]["bumper_right"]
-        bl = decoded["payload"]["bumper_left"]
-        if bl || br
-          info("ABOUT TO BUMP INTO SOMETHING !!! R: #{br} -- L: #{bl}")
+        bumpers = {
+          left: decoded["payload"]["bumper_left"],
+          right: decoded["payload"]["bumper_right"]
+        }
+
+        if bumpers[:left] || bumpers[:right]
+          lights = {
+            left:{
+              extreme: decoded["payload"]["light_bumper_left"],
+              middle: decoded["payload"]["light_bumper_left_front"],
+              center: decoded["payload"]["light_bumper_left_center"]
+            },
+            right:{
+              center: decoded["payload"]["light_bumper_right_center"],
+              middle: decoded["payload"]["light_bumper_right_front"],
+              extreme: decoded["payload"]["light_bumper_right"]
+            }
+          }
+
+          bump_direction = if lights[:left][:center] == 1 && lights[:right][:center] == 1
+            "center"
+          elsif lights[:left][:center] == 1 && lights[:right][:center] == 0
+            "center_left"
+          elsif lights[:left][:center] == 0 && lights[:right][:center] == 1
+            "center_right"
+          elsif lights[:left][:middle] == 1 || lights[:left][:extreme] == 1
+            "left"
+          elsif lights[:right][:middle] == 1 || lights[:right][:extreme] == 1
+            "right"
+          else
+            "OOPS"
+          end
+
+          info("ABOUT TO BUMP INTO SOMETHING !!! #{bumpers} -- #{lights} -- #{bump_direction}")
+
           back_up
           sleep 2.0
-          circle_right
+
+          case bump_direction
+          when "center","center_left","left"
+            circle_right
+          when "center_right","right"
+            circle_left
+          #else
+            #drive_forward
+          end
+
           sleep 2.0
           drive_forward
         end
