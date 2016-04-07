@@ -73,6 +73,9 @@ module RubyRoombot
         if bl || br
           info("ABOUT TO BUMP INTO SOMETHING !!! R: #{br} -- L: #{bl}")
           back_up
+          sleep 1.0
+          circle_left
+          sleep 1.0
           drive_forward
         end
       end
@@ -83,29 +86,22 @@ module RubyRoombot
       send(topic: channel, event: "drive", ref: 15, payload: {velocity: 500, radius: 0})
     end
 
-    def drive_in_circles
-      info("DRIVING IN CIRCLES")
-      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 100, radius: 50})
-    end
-
-    def drive_right
-      info("TURNING RIGHT")
-      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 50, radius: -5})
-      sleep 1.0
-      drive_forward
-    end
-
-    def drive_left
-      info("TURNING LEFT")
-      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 50, radius: 5})
-      sleep 1.0
-      drive_forward
-    end
-
     def back_up
       info("BACKING UP")
-      send(topic: channel, event: "drive", ref: 15, payload: {velocity: -100, radius: 5})
+      send(topic: channel, event: "drive", ref: 15, payload: {velocity: -100, radius: 0})
     end
+
+    def circle_right
+      info("TURNING RIGHT")
+      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: -20})
+    end
+
+    def circle_left
+      info("TURNING LEFT")
+      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: 20})
+    end
+
+
 
 
 
