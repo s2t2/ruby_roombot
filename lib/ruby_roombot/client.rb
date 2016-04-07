@@ -12,9 +12,14 @@ module RubyRoombot
     def initialize(url, channel)
       @connection = Celluloid::WebSocket::Client.new(url, current_actor)
       @channel = channel
+      @drive_action_in_progress = false
     end
 
     def heartbeat
+      if @drive_action_in_progress == true
+        info("SUPPRESSING HEARTBEAT")
+        return true
+      end
       send(topic: "phoenix", event: "heartbeat", payload: {}, ref: 10)
     end
 
@@ -67,6 +72,7 @@ module RubyRoombot
       if decoded["event"] == "phx_reply" && decoded["ref"] == 1 # joined the topic
         info("JOINED THE TOPIC")
         drive_forward
+        @drive_action_in_progress = false
       elsif decoded["event"] == "sensor_update"
         bumpers = {
           left: decoded["payload"]["bumper_left"],
@@ -74,6 +80,8 @@ module RubyRoombot
         }
 
         if bumpers[:left] || bumpers[:right]
+          info("ABOUT TO BUMP INTO SOMETHING !!! #{bumpers[:left]} | #{bumpers[:right]}")
+
           lights = {
             left:{
               extreme: decoded["payload"]["light_bumper_left"],
@@ -101,21 +109,27 @@ module RubyRoombot
             "OOPS"
           end
 
-          info("ABOUT TO BUMP INTO SOMETHING !!! #{bumpers} -- #{lights} -- #{bump_direction}")
+          info("BUMP DIRECTION -- #{bump_direction} -- #{lights[:left].values} | #{lights[:right].values}")
 
           back_up
           sleep 2.0
+          @drive_action_in_progress = false
 
           case bump_direction
-          when "center","center_left","left"
-            circle_right
-          when "center_right","right"
-            circle_left
+          when "center","center_left"
+            turn_slight_right
+          when "left"
+            turn_hard_right
+          when "center_right"
+            turn_slight_left
+          when "right"
+            turn_hard_left
           #else
             #drive_forward
           end
 
           sleep 2.0
+          @drive_action_in_progress = false
           drive_forward
         end
       end
@@ -123,22 +137,38 @@ module RubyRoombot
 
     def drive_forward
       info("DRIVING FORWARD")
+      @drive_action_in_progress = true
       send(topic: channel, event: "drive", ref: 15, payload: {velocity: 500, radius: 0})
     end
 
     def back_up
       info("BACKING UP")
+      @drive_action_in_progress = true
       send(topic: channel, event: "drive", ref: 15, payload: {velocity: -200, radius: 0})
     end
 
-    def circle_right
-      info("TURNING RIGHT")
+    def turn_hard_right
+      info("TURNING HARD RIGHT")
+      @drive_action_in_progress = true
       send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: -25})
     end
 
-    def circle_left
-      info("TURNING LEFT")
+    def turn_slight_right
+      info("TURNING SLIGHT RIGHT")
+      @drive_action_in_progress = true
+      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: -50})
+    end
+
+    def turn_hard_left
+      info("TURNING HARD LEFT")
+      @drive_action_in_progress = true
       send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: 25})
+    end
+
+    def turn_slight_left
+      info("TURNING SLIGHT LEFT")
+      @drive_action_in_progress = true
+      send(topic: channel, event: "drive", ref: 15, payload: {velocity: 10, radius: 50})
     end
 
 
